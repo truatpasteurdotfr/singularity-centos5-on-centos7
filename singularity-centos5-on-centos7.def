@@ -1,0 +1,32 @@
+BootStrap: yum
+OSVersion: 5
+MirrorURL: http://vault.centos.org/5.11/os/$basearch/
+UpdateURL: http://vault.centos.org/5.11/updates/$basearch/
+Include: yum wget
+
+%setup
+# Tru
+# Q&D c7 fix bootstrap for c5 (need compat-db43-4.3.29-17.el6.x86_64 from C6)
+# required compat-db43-4.3.29-15.el6.x86_64 installed on the C7 host
+# or rebuild compat-db-4.6.21-17.el6.src.rpm on CentOS-7 && yum install compat-db43
+if [ ! -f /usr/bin/db43_load ]; then 
+echo "you need to install compat-db43-4.3.29-15.el6 from CentOS-6 or rpmbuild --rebuild compat-db43-4.3.29-15.el6.src.rpm on CentOS-7"
+exit 1
+else
+(cd ${SINGULARITY_ROOTFS}/var/lib/rpm && \
+for i in [A-Za-z]*; do /usr/bin/db_dump $i | /usr/bin/db43_load ${i}.new && mv ${i}.new ${i} ; done
+)
+fi
+
+%runscript
+    echo "This is what happens when you run the container..."
+
+%post
+    echo "Hello from inside the container"
+    # add deprecated CentOS-5 repositories from vault.centos.org
+    wget --no-check-certificate  https://raw.githubusercontent.com/truatpasteurdotfr/centos-5-deprecated/master/CentOS-Base.repo -O /etc/yum.repos.d/CentOS-Base.repo
+    rpm --rebuilddb
+
+%labels
+MAINTAINER truatpasteurdotfr
+
